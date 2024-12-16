@@ -136,19 +136,17 @@ const FileUploadForm = () => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+  
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
+  
     ctx.beginPath();
     ctx.moveTo(x, y);
     canvas.isDrawing = true;
   };
+  
 
 
   const draw = (e) => {
@@ -256,7 +254,7 @@ const FileUploadForm = () => {
           onMouseMove={draw}
           onTouchMove={draw}
           onMouseUp={stopDrawing}
-          // onTouchEnd={stopDrawing}
+          onTouchEnd={stopDrawing}
           onMouseLeave={stopDrawing}
           className="border border-gray-400 rounded-md"
         />
