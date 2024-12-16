@@ -1,14 +1,12 @@
-import React, { useState,useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import TermsAndConditions from './TermsAnd Conditions';
+import TermsAndConditions from './TermsAndConditions'; 
 import { generateReceipt } from '../service/generateReceipt';
-
-
 
 const FileUploadForm = () => {
   const [formData, setFormData] = useState({
     name: '',
-    userName: '', // New field added
+    userName: '',
     company: '',
     billing_address: '',
     installation_address: '',
@@ -41,7 +39,6 @@ const FileUploadForm = () => {
     date: '',
     place: '',
   });
-
 
   const [profilePic, setProfilePic] = useState(null);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
@@ -80,16 +77,16 @@ const FileUploadForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-  
+
     if (!isTermsAccepted) {
       alert('Please accept the terms and conditions before submitting.');
       return;
     }
-  
+
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
     if (profilePic) data.append('profilePic', profilePic);
-  
+
     try {
       const signatureImage = saveSignature();
       const byteString = atob(signatureImage.split(',')[1]);
@@ -99,12 +96,12 @@ const FileUploadForm = () => {
       }
       const blob = new Blob([uint8Array], { type: 'image/jpeg' });
       data.append('signature', blob, 'signature.jpg');
-  
-      const apiUrl = import.meta.env.VITE_API_URL ; // Updated to use Vite's environment variable
+
+      const apiUrl = import.meta.env.VITE_API_URL;
       await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-  
+
       alert('Form submitted successfully!');
       setIsSubmitted(true);
     } catch (error) {
@@ -112,22 +109,20 @@ const FileUploadForm = () => {
       alert('Failed to submit the form. Please try again.');
     }
   };
-  
+
   const handleGenerateReceipt = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL ; // Updated to use Vite's environment variable
+      const apiUrl = import.meta.env.VITE_API_URL;
       const response = await axios.get(`${apiUrl}/get-form-data`);
       if (response.data?.length > 0) {
         const latestFormData = response.data[response.data.length - 1];
-  
-        // Generate and download receipt
+
         generateReceipt(latestFormData);
-  
-        // Delete the form data after generating receipt
+
         await axios.delete(`${apiUrl}/delete-form-data`, {
           data: { id: latestFormData.id },
         });
-  
+
         alert('Receipt generated and form data deleted successfully.');
       } else {
         alert('No form data found to generate the receipt.');
@@ -137,17 +132,14 @@ const FileUploadForm = () => {
       alert('Failed to generate receipt. Please try again.');
     }
   };
-  
-  
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-      // Set the background color to white
-  ctx.fillStyle = 'white'; 
-  ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the canvas with white
-    
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     const rect = canvas.getBoundingClientRect();
     ctx.beginPath();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
@@ -160,7 +152,7 @@ const FileUploadForm = () => {
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.strokeStyle = 'blue ';
+    ctx.strokeStyle = 'blue';
     ctx.lineWidth = 2;
     ctx.stroke();
   };
@@ -171,7 +163,6 @@ const FileUploadForm = () => {
       canvas.isDrawing = false;
     }
   };
-  
 
   return (
     <form
@@ -180,9 +171,9 @@ const FileUploadForm = () => {
     >
       <h2 className="text-3xl font-bold text-blue-600 text-center">RIYAZ INTERNET PVT. LTD</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {[
-          { name: 'userName', label: 'Username' }, // Added here
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {[
+          { name: 'userName', label: 'Username' },
           { name: 'name', label: 'Full Name' },
           { name: 'company', label: 'Company Name' },
           { name: 'billing_address', label: 'Billing Address', type: 'textarea' },
@@ -194,25 +185,9 @@ const FileUploadForm = () => {
           { name: 'telephone', label: 'Telephone (O.)' },
           { name: 'email', label: 'E-mail ID' },
           { name: 'aadhar', label: 'Aadhar No' },
-          { name: 'internet_usage', label: 'This internet connection is mainly going to be used for', type: 'dropdown', options: ['Business/Work', 'Residential', 'Both'] },
+          { name: 'internet_usage', label: 'Internet Usage', type: 'dropdown', options: ['Business', 'Residential', 'Both'] },
           { name: 'gender', label: 'Gender', type: 'dropdown', options: ['Male', 'Female'] },
           { name: 'dob', label: 'Date of Birth', type: 'date' },
-          { name: 'plan_name', label: 'User Plan Name' },
-          { name: 'plan_id', label: 'User Plan ID' },
-          { name: 'installation_charges', label: 'Installation Charges (Rs.)', type: 'number' },
-          { name: 'payment_mechanism', label: 'Payment Mechanism', type: 'dropdown', options: ['Prepaid', 'Postpaid'] },
-          { name: 'renewal_charges', label: 'Renewal Charges (Rs.)', type: 'number' },
-          { name: 'ips', label: 'No. of Static IPS' },
-          { name: 'other_charges', label: 'Other Charges (if any)', type: 'number' },
-          { name: 'payment_mode', label: 'Payment Mode', type: 'dropdown', options: ['Cash', 'Cheque', 'UPI'] },
-          { name: 'amount', label: 'Amount (Rs.)', type: 'number' },
-          { name: 'bank', label: 'Cheque / DD issued on Bank' },
-          { name: 'branch', label: 'Branch' },
-          { name: 'cheque_no', label: 'Cheque/DD No.' },
-          { name: 'dated', label: 'Cheque/DD issued on (Dated)', type: 'date' },
-          { name: 'pan', label: 'PAN (For Post Paid)' },
-          { name: 'date', label: 'Date',type:'date' },
-          { name: 'place', label: 'Place' },
         ].map(({ name, label, type = 'text', options }) => (
           <div key={name} className="space-y-1">
             <label htmlFor={name} className="block text-sm font-medium text-gray-700">
@@ -249,67 +224,36 @@ const FileUploadForm = () => {
             )}
           </div>
         ))}
+      </div>
 
-        {/* Declaration Section */}
-        <div className="space-y-4 col-span-2">
-          <p className="text-sm font-semibold text-gray-700">
-            DECLARATION IN CASE PAYMENT IS MADE BY ENTITY OTHER THAN THE APPLICANT:
-          </p>
-          {[
-            {
-              name: 'entity_payment_name',
-              label: 'This is to inform that we are making the payment to RIYAZ INTERNET PVT.LTD. on behalf of',
-            },
-            {
-              name: 'entity_payment_details',
-              label: 'Name of the individual/organization making payment in favor of RIYAZ INTERNET PVT. LTD.',
-            },
-          ].map(({ name, label }) => (
-            <div key={name} className="space-y-1">
-              <label htmlFor={name} className="block text-sm font-medium text-gray-700">
-                {label}
-              </label>
-              <input
-                type="text"
-                name={name}
-                onChange={handleChange}
-                placeholder={label}
-                className="mt-1 p-2 border border-gray-300 rounded-md w-full"
-              />
-            </div>
-          ))}
-        </div>
-      
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
+        <input
+          type="file"
+          onChange={handleFileChange}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
 
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
-          <input
-            type="file"
-            onChange={handleFileChange}
-            className="mt-1 block w-full text-sm text-gray-600"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
-          <canvas
-            ref={canvasRef}
-            width="400"
-            height="150"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            className="border border-gray-400 rounded-md"
-          />
-          <button
-            type="button"
-            onClick={clearCanvas}
-            className="mt-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
-          >
-            Clear Signature
-          </button>
-        </div>
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
+        <canvas
+          ref={canvasRef}
+          width="400"
+          height="150"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          className="border border-gray-400 rounded-md"
+        />
+        <button
+          type="button"
+          onClick={clearCanvas}
+          className="mt-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+        >
+          Clear Signature
+        </button>
       </div>
 
       <TermsAndConditions onAcceptanceChange={handleTermsAcceptanceChange} />
@@ -336,6 +280,3 @@ const FileUploadForm = () => {
 };
 
 export default FileUploadForm;
-
-
-
