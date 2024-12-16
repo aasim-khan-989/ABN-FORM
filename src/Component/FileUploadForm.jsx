@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import TermsAndConditions from './TermsAndConditions'; 
+import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
 
 const FileUploadForm = () => {
@@ -136,26 +136,36 @@ const FileUploadForm = () => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const rect = canvas.getBoundingClientRect();
+    const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(x, y);
     canvas.isDrawing = true;
   };
+
 
   const draw = (e) => {
     const canvas = canvasRef.current;
     if (!canvas?.isDrawing) return;
+
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
     ctx.strokeStyle = 'blue';
     ctx.lineWidth = 2;
     ctx.stroke();
   };
+
 
   const stopDrawing = () => {
     const canvas = canvasRef.current;
@@ -242,11 +252,15 @@ const FileUploadForm = () => {
           width="400"
           height="150"
           onMouseDown={startDrawing}
+          onTouchStart={startDrawing}
           onMouseMove={draw}
+          onTouchMove={draw}
           onMouseUp={stopDrawing}
+          onTouchEnd={stopDrawing}
           onMouseLeave={stopDrawing}
           className="border border-gray-400 rounded-md"
         />
+
         <button
           type="button"
           onClick={clearCanvas}
