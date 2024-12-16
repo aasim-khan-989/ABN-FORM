@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
 import axios from 'axios';
+import TermsAndConditions from './TermsAnd Conditions';
 import { generateReceipt } from '../service/generateReceipt';
+
+
 
 const FileUploadForm = () => {
   const [formData, setFormData] = useState({
     name: '',
+    userName: '', // New field added
     company: '',
     billing_address: '',
     installation_address: '',
@@ -15,112 +19,225 @@ const FileUploadForm = () => {
     telephone: '',
     email: '',
     aadhar: '',
-    use_for: '',
+    internet_usage: '',
+    gender: '',
+    dob: '',
     plan_name: '',
-    installation_charges: '',
-    renewal_charges: '',
     plan_id: '',
+    installation_charges: '',
     payment_mechanism: '',
+    renewal_charges: '',
     ips: '',
     other_charges: '',
     payment_mode: '',
     amount: '',
     bank: '',
-    cheque_no: '',
-    date: '',
     branch: '',
+    cheque_no: '',
+    dated: '',
     pan: '',
+    entity_payment_name: '',
+    entity_payment_details: '',
+    date: '',
+    place: '',
   });
 
+
   const [profilePic, setProfilePic] = useState(null);
-  const [signature, setSignature] = useState(null);
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const canvasRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData((prevState) => ({ ...prevState, [name]: value }));
   };
 
-  const handleFileChange = (e, field) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (field === 'profilePic') {
-      setProfilePic(file);
-    } else if (field === 'signature') {
-      setSignature(file);
+    setProfilePic(file);
+  };
+
+  const handleTermsAcceptanceChange = (isAccepted) => {
+    setIsTermsAccepted(isAccepted);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      data.append(key, formData[key]);
-    });
-    if (profilePic) data.append('profilePic', profilePic);
-    if (signature) data.append('signature', signature);
+  const saveSignature = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      return canvas.toDataURL('image/jpeg');
+    }
+    throw new Error('Canvas not found for saving signature.');
+  };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+  
+    if (!isTermsAccepted) {
+      alert('Please accept the terms and conditions before submitting.');
+      return;
+    }
+  
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+    if (profilePic) data.append('profilePic', profilePic);
+  
     try {
-      const response = await axios.post('http://localhost:3000/submit-form', data, {
+      const signatureImage = saveSignature();
+      const byteString = atob(signatureImage.split(',')[1]);
+      const uint8Array = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+      data.append('signature', blob, 'signature.jpg');
+  
+      const apiUrl = import.meta.env.VITE_API_URL ; // Updated to use Vite's environment variable
+      await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+  
       alert('Form submitted successfully!');
-      console.log('Response:', response.data);
+      setIsSubmitted(true);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error submitting form');
+      console.error('Error during form submission:', error);
+      alert('Failed to submit the form. Please try again.');
     }
   };
+  
+  const handleGenerateReceipt = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ; // Updated to use Vite's environment variable
+      const response = await axios.get(`${apiUrl}/get-form-data`);
+      if (response.data?.length > 0) {
+        const latestFormData = response.data[response.data.length - 1];
+  
+        // Generate and download receipt
+        generateReceipt(latestFormData);
+  
+        // Delete the form data after generating receipt
+        await axios.delete(`${apiUrl}/delete-form-data`, {
+          data: { id: latestFormData.id },
+        });
+  
+        alert('Receipt generated and form data deleted successfully.');
+      } else {
+        alert('No form data found to generate the receipt.');
+      }
+    } catch (error) {
+      console.error('Error during receipt generation:', error);
+      alert('Failed to generate receipt. Please try again.');
+    }
+  };
+  
+  
 
-  // Function to handle the PDF generation
-  const handleGeneratePDF = () => {
-    generateReceipt(formData, profilePic, signature); // Call the function to generate PDF
+  const startDrawing = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+      // Set the background color to white
+  ctx.fillStyle = 'white'; 
+  ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the canvas with white
+    
+    const rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    canvas.isDrawing = true;
   };
 
+  const draw = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas?.isDrawing) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.strokeStyle = 'blue ';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.isDrawing = false;
+    }
+  };
+  
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow-md space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-700">Your Details</h2>
-      
-      <div className="space-y-4">
-        {[
-          { name: "name", label: "Full Name" },
-          { name: "company", label: "Company Name" },
-          { name: "billing_address", label: "Billing Address", type: "textarea" },
-          { name: "installation_address", label: "Installation Address", type: "textarea" },
-          { name: "city", label: "City" },
-          { name: "pin", label: "PIN" },
-          { name: "state", label: "State" },
-          { name: "mobile", label: "Mobile" },
-          { name: "telephone", label: "Telephone" },
-          { name: "email", label: "Email" },
-          { name: "aadhar", label: "Aadhar (Optional)" },
-          { name: "use_for", label: "Use For" },
-          { name: "plan_name", label: "Plan Name" },
-          { name: "installation_charges", label: "Installation Charges", type: "number" },
-          { name: "renewal_charges", label: "Renewal Charges", type: "number" },
-          { name: "plan_id", label: "Plan ID" },
-          { name: "payment_mechanism", label: "Payment Mechanism" },
-          { name: "ips", label: "IPS" },
-          { name: "other_charges", label: "Other Charges", type: "number" },
-          { name: "payment_mode", label: "Payment Mode" },
-          { name: "amount", label: "Amount", type: "number" },
-          { name: "bank", label: "Bank" },
-          { name: "cheque_no", label: "Cheque No." },
-          { name: "date", label: "Date", type: "date" },
-          { name: "branch", label: "Branch" },
-          { name: "pan", label: "PAN" },
-        ].map(({ name, label, type = "text" }) => (
-          <div key={name}>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}</label>
-            {type === "textarea" ? (
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-4xl mx-auto p-8 bg-gradient-to-r from-blue-100 to-blue-50 rounded-lg shadow-lg space-y-6"
+    >
+      <h2 className="text-3xl font-bold text-blue-600 text-center">RIYAZ INTERNET PVT. LTD</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {[
+          { name: 'userName', label: 'Username' }, // Added here
+          { name: 'name', label: 'Full Name' },
+          { name: 'company', label: 'Company Name' },
+          { name: 'billing_address', label: 'Billing Address', type: 'textarea' },
+          { name: 'installation_address', label: 'Installation Address', type: 'textarea' },
+          { name: 'city', label: 'City' },
+          { name: 'pin', label: 'PIN' },
+          { name: 'state', label: 'State' },
+          { name: 'mobile', label: 'Mobile' },
+          { name: 'telephone', label: 'Telephone (O.)' },
+          { name: 'email', label: 'E-mail ID' },
+          { name: 'aadhar', label: 'Aadhar No' },
+          { name: 'internet_usage', label: 'This internet connection is mainly going to be used for', type: 'dropdown', options: ['Business/Work', 'Residential', 'Both'] },
+          { name: 'gender', label: 'Gender', type: 'dropdown', options: ['Male', 'Female'] },
+          { name: 'dob', label: 'Date of Birth', type: 'date' },
+          { name: 'plan_name', label: 'User Plan Name' },
+          { name: 'plan_id', label: 'User Plan ID' },
+          { name: 'installation_charges', label: 'Installation Charges (Rs.)', type: 'number' },
+          { name: 'payment_mechanism', label: 'Payment Mechanism', type: 'dropdown', options: ['Prepaid', 'Postpaid'] },
+          { name: 'renewal_charges', label: 'Renewal Charges (Rs.)', type: 'number' },
+          { name: 'ips', label: 'No. of Static IPS' },
+          { name: 'other_charges', label: 'Other Charges (if any)', type: 'number' },
+          { name: 'payment_mode', label: 'Payment Mode', type: 'dropdown', options: ['Cash', 'Cheque', 'UPI'] },
+          { name: 'amount', label: 'Amount (Rs.)', type: 'number' },
+          { name: 'bank', label: 'Cheque / DD issued on Bank' },
+          { name: 'branch', label: 'Branch' },
+          { name: 'cheque_no', label: 'Cheque/DD No.' },
+          { name: 'dated', label: 'Cheque/DD issued on (Dated)', type: 'date' },
+          { name: 'pan', label: 'PAN (For Post Paid)' },
+          { name: 'date', label: 'Date',type:'date' },
+          { name: 'place', label: 'Place' },
+        ].map(({ name, label, type = 'text', options }) => (
+          <div key={name} className="space-y-1">
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+              {label}
+            </label>
+            {type === 'textarea' ? (
               <textarea
                 name={name}
                 onChange={handleChange}
                 placeholder={label}
                 className="mt-1 p-2 border border-gray-300 rounded-md w-full"
               ></textarea>
+            ) : type === 'dropdown' ? (
+              <select
+                name={name}
+                onChange={handleChange}
+                className="mt-1 p-2 border border-gray-300 rounded-md w-full"
+              >
+                <option value="">Select</option>
+                {options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
                 type={type}
@@ -132,42 +249,86 @@ const FileUploadForm = () => {
             )}
           </div>
         ))}
+
+        {/* Declaration Section */}
+        <div className="space-y-4 col-span-2">
+          <p className="text-sm font-semibold text-gray-700">
+            DECLARATION IN CASE PAYMENT IS MADE BY ENTITY OTHER THAN THE APPLICANT:
+          </p>
+          {[
+            {
+              name: 'entity_payment_name',
+              label: 'This is to inform that we are making the payment to RIYAZ INTERNET PVT.LTD. on behalf of',
+            },
+            {
+              name: 'entity_payment_details',
+              label: 'Name of the individual/organization making payment in favor of RIYAZ INTERNET PVT. LTD.',
+            },
+          ].map(({ name, label }) => (
+            <div key={name} className="space-y-1">
+              <label htmlFor={name} className="block text-sm font-medium text-gray-700">
+                {label}
+              </label>
+              <input
+                type="text"
+                name={name}
+                onChange={handleChange}
+                placeholder={label}
+                className="mt-1 p-2 border border-gray-300 rounded-md w-full"
+              />
+            </div>
+          ))}
+        </div>
+      
+
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="mt-1 block w-full text-sm text-gray-600"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
+          <canvas
+            ref={canvasRef}
+            width="400"
+            height="150"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            className="border border-gray-400 rounded-md"
+          />
+          <button
+            type="button"
+            onClick={clearCanvas}
+            className="mt-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+          >
+            Clear Signature
+          </button>
+        </div>
       </div>
 
-      <h3 className="text-xl font-medium text-gray-700">Upload Files</h3>
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="profilePic" className="block text-sm font-medium text-gray-700">Profile Picture</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'profilePic')}
-            className="mt-1 p-2 border border-gray-300 rounded-md"
-          />
-        </div>
-        <div>
-          <label htmlFor="signature" className="block text-sm font-medium text-gray-700">Signature</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'signature')}
-            className="mt-1 p-2 border border-gray-300 rounded-md"
-          />
-        </div>
-      </div>
+      <TermsAndConditions onAcceptanceChange={handleTermsAcceptanceChange} />
 
       <div className="flex justify-center space-x-4">
         <button
           type="submit"
-          className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition duration-200"
+          className={`px-6 py-3 text-white rounded-md font-medium ${isTermsAccepted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+          disabled={!isTermsAccepted}
         >
           Submit
         </button>
-        {/* Generate PDF Button */}
         <button
           type="button"
-          onClick={handleGeneratePDF}
-          className="bg-green-600 text-white py-2 px-6 rounded-md hover:bg-green-700 transition duration-200"
+          onClick={handleGenerateReceipt}
+          className={`px-6 py-3 text-white rounded-md font-medium ${isSubmitted ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
+          disabled={!isSubmitted}
         >
-          Generate PDF
+          Generate Receipt
         </button>
       </div>
     </form>
@@ -175,3 +336,6 @@ const FileUploadForm = () => {
 };
 
 export default FileUploadForm;
+
+
+

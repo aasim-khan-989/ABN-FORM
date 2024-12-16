@@ -1,59 +1,349 @@
-// services/generateReceipt.js
-import jsPDF from 'jspdf';
+import { jsPDF } from "jspdf";
 
-export const generateReceipt = (formData, profilePic, signature) => {
-  const doc = new jsPDF();
 
-  // Adding the title
-  doc.setFontSize(20);
-  doc.text('Receipt', 14, 20);
-
-  // Customer details (front page)
-  doc.setFontSize(12);
-  doc.text(`Name: ${formData.name}`, 14, 30);
-  doc.text(`Company: ${formData.company}`, 14, 40);
-  doc.text(`Billing Address: ${formData.billing_address}`, 14, 50);
-  doc.text(`Installation Address: ${formData.installation_address}`, 14, 60);
-  doc.text(`City: ${formData.city}`, 14, 70);
-  doc.text(`PIN: ${formData.pin}`, 14, 80);
-  doc.text(`State: ${formData.state}`, 14, 90);
-  doc.text(`Mobile: ${formData.mobile}`, 14, 100);
-  doc.text(`Telephone: ${formData.telephone}`, 14, 110);
-  doc.text(`Email: ${formData.email}`, 14, 120);
-
-  // Adding the profile picture if available
-  if (profilePic) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const imgData = reader.result;
-      doc.addImage(imgData, 'JPEG', 160, 30, 30, 30); // x, y, width, height
-      doc.save('receipt.pdf');
+// Helper function to resize images
+const resizeImage = (base64Image, width, height) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Image;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg")); // Convert to JPEG
     };
-    reader.readAsDataURL(profilePic);
-  }
-
-  // Adding the signature if available
-  if (signature) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const imgData = reader.result;
-      doc.addImage(imgData, 'JPEG', 160, 70, 40, 20); // Adjust position for signature
-      doc.save('receipt.pdf');
-    };
-    reader.readAsDataURL(signature);
-  }
-
-  // Adding terms and conditions on the back page
-  doc.addPage();
-  doc.setFontSize(14);
-  doc.text('Terms and Conditions', 14, 20);
-  doc.setFontSize(10);
-  doc.text('1. This is a demo receipt for the service.', 14, 30);
-  doc.text('2. The billing address and installation address are subject to confirmation.', 14, 40);
-  doc.text('3. Payment terms are as per the agreement.', 14, 50);
-  doc.text('4. Any disputes will be handled as per the company policy.', 14, 60);
-  doc.text('5. This receipt is valid for a limited time.', 14, 70);
-
-  // Saving the generated PDF
-  doc.save('receipt.pdf');
+    img.onerror = (err) => reject(err);
+  });
 };
+
+
+export const generateReceipt = async (formData) => {
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  
+
+  // Set background color
+  doc.setFillColor(204, 255, 204); // Light green color (RGB: 204, 255, 204)
+  doc.rect(0, 0, 210, 297, "F"); // Full-page rectangle fill (A4 dimensions)
+
+  // Helper function for lines
+  const drawLine = (y) => doc.line(10, y, 200, y);
+
+  // Section header generator
+  const addSectionHeader = (title, y) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(title, 105, y, null, null, "center");
+    return y + 6;
+  };
+
+  // Key-value pair generator
+  const addKeyValuePair = (key, value, y, xKey = 10, xValue = 80) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(`${key}:`, xKey, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(value || "N/A", xValue, y);
+    return y + 6;
+  };
+
+  // Header Section
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("RIYAZ INTERNET PVT. LTD.", 105, 15, null, null, "center");
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "Office: Sardar Tower, Near Ram Mandir, Osmanpura, Aurangabad - 05",
+    105,
+    22,
+    null,
+    null,
+    "center"
+  );
+  doc.text(
+    "Mob: 9225306066 | Email: riyaz@riyazinternet.com",
+    105,
+    27,
+    null,
+    null,
+    "center"
+  );
+  doc.text(
+    "Customer Care No: 7447713083 | Website: www.riyazinternet.com",
+    105,
+    32,
+    null,
+    null,
+    "center"
+  );
+  doc.setFont("helvetica", "bold");
+  doc.text(`CAF No: 7385 ${formData.caf_no || " "}`, 200, 32, null, null, "right");
+
+  // Divider
+  drawLine(35);
+
+  // Section: Your Details
+  let y = addSectionHeader("YOUR DETAILS", 42);
+
+  const userDetails = [
+    { label: "Name", value: formData.name },
+    { label: "Company Name", value: formData.company },
+    { label: "Billing Address", value: formData.billing_address },
+    { label: "Installation Address", value: formData.installation_address },
+    { label: "City", value: formData.city },
+    { label: "PIN", value: formData.pin },
+    { label: "State", value: formData.state },
+
+    {
+      label: "Mobile",
+      value: formData.mobile,
+      inlineLabel: "Tel. (O)",
+      inlineValue: formData.telephone,
+    },
+
+    {
+      label: "Gender",
+      value: formData.gender,
+      inlineLabel: "Date of Birth",
+      inlineValue: formData.dob,
+    },
+  ];
+
+  userDetails.forEach(({ label, value, inlineLabel, inlineValue }) => {
+    y = addKeyValuePair(label, value, y, 10, 58); // Adjust the x-coordinate for values (e.g., from 80 to 70)
+    if (inlineLabel) {
+      y -= 6; // Align inline key-value pairs
+      addKeyValuePair(inlineLabel, inlineValue, y, 120, 150); // Adjust for inline values
+      y += 6;
+    }
+  });
+
+  if (formData.profilePic) {
+    doc.addImage(formData.profilePic, "JPEG", 160, 45, 30, 30);
+  }
+
+  drawLine(y);
+  y += 6;
+
+
+
+  // Section: Your Plan Preference
+  y = addSectionHeader("YOUR PLAN PREFERENCE", y);
+
+  const planDetails = [
+    { label: "User Plan Name", value: formData.plan_name },
+    { label: "User Plan ID", value: formData.plan_id },
+    { label: "Installation Charges", value: formData.installation_charges },
+    { label: "Renewal Pack Charges", value: formData.renewal_charges },
+    {
+      label: "No. of Static IPs",
+      value: formData.ips,
+      inlineLabel: "Other Charges (IF any)",
+      inlineValue: formData.other_charges,
+    },
+  ];
+
+  planDetails.forEach(({ label, value, inlineLabel, inlineValue }) => {
+    y = addKeyValuePair(label, value, y, 10, 58);
+    if (inlineLabel) {
+      y -= 6; // Align inline key-value pairs
+      addKeyValuePair(inlineLabel, inlineValue, y, 120, 168);
+      y += 6;
+    }
+  });
+
+  drawLine(y);
+  y += 6;
+
+  // Section: Payment Details
+  // Section: Payment Details
+  y = addSectionHeader("PAYMENT DETAILS", y);
+
+  const paymentDetails = [
+    { label: "Payment Mode", value: formData.payment_mode },
+    { label: "Amount (Rs.)", value: formData.amount },
+    {
+      label: "Cheque/DD Bank",
+      value: formData.bank,
+      inlineLabel: "Branch",
+      inlineValue: formData.branch,
+    },
+    {
+      label: "Cheque/DD No.",
+      value: formData.cheque_no,
+      inlineLabel: "Dated",
+      inlineValue: formData.dated,
+    },
+    { label: "PAN", value: formData.pan },
+  ];
+
+  // Adjusting the payment details for proper layout with inline pairs
+  paymentDetails.forEach(({ label, value, inlineLabel, inlineValue }) => {
+    y = addKeyValuePair(label, value, y, 10, 58); // Adjusted x-coordinates for labels and values
+    if (inlineLabel) {
+      y -= 6; // Align inline key-value pairs
+      addKeyValuePair(inlineLabel, inlineValue, y, 120, 140); // Adjusted x-coordinates for inline pairs
+      y += 6;
+    }
+  });
+
+
+  // Draw a line after the "Payment Details" section
+  drawLine(y);
+  y += 6;
+
+  // Add the note
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const noteText = `
+Note: All Cheques/Demand Drafts should be drawn in favor of RIYAZ INTERNET PVT. LTD., payable at Aurangabad.
+I/we have carefully read the terms & conditions and technical specifications of RIYAZ INTERNET PVT. LTD. services
+and agree to abide by the same. I/we confirm that the details provided in this application are correct to the best of my/our knowledge.
+`;
+  doc.text(noteText, 10, y, { maxWidth: 190, align: "justify" });
+  y += 20; // Add spacing after the note
+
+  // Signature section
+  doc.setFont("helvetica", "bold");
+  doc.text("Signature of Customer:", 10, y);
+  if (formData.signature) {
+    try {
+      // Resize image to 150x75 pixels (you can adjust this size)
+      const resizedSignature = await resizeImage(formData.signature, 150, 75);
+      
+      // Now add the resized image to the PDF
+      doc.addImage(resizedSignature, "JPEG", 80, y-5, 40, 20); // Coordinates and size as needed
+    } catch (error) {
+      console.error("Error resizing the signature image:", error);
+    }
+  }
+
+  // Place and Date aligned next to the signature
+  doc.text("Place:", 140, y); // Place aligned to the right
+  doc.text(formData.place || "N/A", 150, y);
+
+  y += 6; // Move below the place for date
+  doc.text("Date:", 140, y);
+  doc.text(formData.date || "N/A", 150, y);
+
+  y += 20; // Add spacing after signature section
+  drawLine(y); // Line above the declaration section
+  y += 6;
+
+  // Render the declaration section
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(
+    "DECLARATION IN CASE PAYMENT IS MADE BY ENTITY OTHER THAN THE APPLICANT:",
+    10,
+    y
+  );
+  y += 8; // Spacing after header for readability
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+
+  // Label: "on behalf of"
+  doc.text(
+    "This is to inform that we are making the payment to RIYAZ INTERNET PVT. LTD. on behalf of:",
+    10,
+    y
+  );
+  y += 6; // Spacing below label
+  doc.setFont("helvetica", "bold"); // Make value bold
+  doc.text(formData.entity_payment_name || "N/A", 10, y); // Align value below label
+  doc.text("_____________________", 10, y + 2); // Underline value
+  y += 12; // Spacing before next label
+
+  // Label: "individual/organization making payment"
+  doc.setFont("helvetica", "normal"); // Reset to normal font for label
+  doc.text(
+    "Name of the individual/organization making payment in favor of RIYAZ INTERNET PVT. LTD:",
+    10,
+    y
+  );
+  y += 6; // Spacing below label
+  doc.setFont("helvetica", "bold"); // Make value bold
+  doc.text(formData.entity_payment_details || "N/A", 10, y); // Align value below label
+  doc.text("_____________________", 10, y + 2); // Underline value
+  y += 14; // Final spacing before the next section
+
+
+
+  // Add a new page with a light green background
+  doc.addPage();
+  doc.setFillColor(204, 255, 204); // RGB for light green
+  doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
+
+  // Add the header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('TERMS & CONDITIONS', 105, 15, { align: 'center' });
+
+  // Define the terms and conditions text
+  const terms = `
+  1. Subject to the acceptance of the application & technical feasibility, Riyaz Internet PVT. LTD. services will be provided as soon as possible. 2. Data rates shown (downstream/upstream) are applicable only to the last mile. Riyaz Internet PVT. LTD. is not responsible for lower download/upload rates caused by accessed websites, international gateways, or media. 3. All IP addresses assigned will be dynamic. 4. Shifting of broadband connections is subject to technical feasibility and applicable charges. 5. Riyaz Internet PVT. LTD. reserves the right to disconnect services if there is sufficient evidence of misuse affecting Riyaz Internet or its network. 6. The customer is responsible for using the service only for legal purposes. 7. Riyaz Internet PVT. LTD. will exercise care in providing services but is not responsible for interruptions due to power failures, equipment malfunction, or natural calamities. 8. Riyaz Internet PVT. LTD. is not responsible for hardware/software issues or areas outside its control. 9. The company is not responsible for customers' actions or consequences resulting from its services. 10. Riyaz Internet PVT. LTD. is not liable for content accessed, transmitted, or transactions made via the internet. 11. Customers must submit a signed application with consent to agree to these terms. 12. The installation address provided by the customer must match the application form details. 13. Customers shall pay applicable charges, taxes, and levies determined by authorities. 14. Connection will be provided at the specified premises, and customers will be informed of the installation date. 15. Customers must ensure their devices are compatible with the services. Riyaz Internet is not responsible for compatibility issues arising from changes to customer hardware/software.\n 16. Riyaz Internet PVT. LTD. is not responsible for compatibility Problems due to change of hardware/software at the customer premises. The CUSTOMER have verity with Riyaz Internet PVT. LTD. and migrate to a Suitable plan (in necessary) should there be a compability problem due to change in hardware/software by the CUSTOMER Serving Time is 10 Am to 6 Pm. Billing & Payments 17. Payments should be made via cheque, DD, or Pay Order favoring Riyaz Internet PVT. LTD., Aurangabad. Outstation cheques, postal orders, and money orders are not accepted. 18. Cheques will not be accepted after the due date. 19. Service tax and other statutory levies are payable by the customer. 20. Tariffs may be revised periodically. 21. No refunds will be given for connectivity or service charges once paid. 22. Modems and wiring supplied by Riyaz Internet remain the property of the company and must not be tampered with. 23. No equipment installed by Riyaz Internet may be removed without prior written consent. 24. Customers must ensure necessary permissions are obtained for cabling. 25. Services are not guaranteed to be uninterrupted or free from harmful components. 26. Customers are responsible for password security and misuse of their facilities. 27. Power supply for service operation must be provided by the customer. 28. Connections may include promotional content; Riyaz Internet reserves the right to introduce advertisements. 29. Connections are for customer use only and must not be reassigned or resold. 30. Unauthorized hardware/software or encryption beyond permitted levels is prohibited. 31. Internet telephony must comply with government regulations. 32. Devices provided under bundled services must not be used outside Riyaz Internet's network until dues are fully paid. 33. The Customer shall not use the device supplied by Riyaz Internet under Bundled Services on any other network other than that of Riyaz Internet until all dues are fully paid. 34. If the applicant has no right or has a restrictive right to use the area abutting the CUSTOMER PREMISES, it is the applicant’s responsibility to obtain necessary permissions in writing from concerned authorities like the landlord, society, etc., permitting Riyaz Internet to lay cables to CUSTOMER PREMISES. 35. Neither Riyaz Internet nor its ASSOCIATE warrants that the service will be uninterrupted or error-free or free from viruses, worms, Trojan horses, or other harmful components. 36. The CUSTOMER understands that the internet contains unedited materials, some of which may be sexually explicit or offensive. Accessing such materials is at the CUSTOMER's own risk. Riyaz Internet or its ASSOCIATE has no control over such content and accepts no responsibility for it. 37. It is the responsibility of the CUSTOMER to ensure the provided password is kept secret, not disclosed to anyone, and changed as necessary. Riyaz Internet will not be liable for any misuse of the CUSTOMER’s facility under any circumstances. 38. The CUSTOMER is responsible for providing power supply at no charge to avail of the services of Riyaz Internet. 39. The CUSTOMER acknowledges that the connection provided by Riyaz Internet is promotional and agrees that Riyaz Internet reserves the right to introduce commercial advertisements through its services. 40. The CUSTOMER is responsible for providing power supply at no charge to avail of the services of Riyaz Internet.  41. The CUSTOMER acknowledges that the connection provided by Riyaz Internet is promotional and agrees that Riyaz Internet reserves the right to introduce commercial advertisements through its services.  42. Riyaz Internet may revise its terms of service without prior notice. By using Riyaz Internet services, customers agree to all updated terms of service, which may be accessed on request. `;
+const margin = 10; // Side margin
+const termsStartY = 25; // Start position for terms and conditions
+const lineHeight = 6; // Line height
+
+doc.setFont("helvetica", "normal");
+doc.setFontSize(9); // Font size for terms
+
+// Render the terms and conditions
+doc.text(terms, margin, termsStartY, {
+  maxWidth: doc.internal.pageSize.width - 2 * margin,
+  lineHeightFactor: 1.5,
+});
+
+// Calculate the height of the terms and Y position for the signature
+const termsHeight = doc.getTextDimensions(terms, {
+  maxWidth: doc.internal.pageSize.width - 2 * margin,
+}).h;
+
+// Adjust signature position further down
+let signatureY = doc.internal.pageSize.height - 60; // 60mm from the bottom of the page
+
+doc.setFont("helvetica", "bold");
+doc.setFontSize(10);
+
+// Add the label for the signature
+doc.text("CUSTOMER SIGNATURE:", margin, signatureY);
+
+// Add the signature image, if provided
+if (formData.signature) {
+  const signatureImageWidth = 60; // Width of the signature image in mm
+  const signatureImageHeight = 20; // Height of the signature image in mm
+  const signatureImageX = margin + 45; // Position of the signature image (relative to text)
+  const signatureImageY = signatureY - 3 ; // Place the signature image 5mm below the label
+
+  doc.addImage(
+    formData.signature,
+    "JPEG",
+    signatureImageX,
+    signatureImageY,
+    signatureImageWidth,
+    signatureImageHeight
+  );
+}
+
+// Add the footer text at the bottom of the page
+const footerY = doc.internal.pageSize.height - 20; // Position 20 units from the bottom
+doc.setFont("helvetica", "bold");
+doc.setFontSize(20); // Large text for emphasis
+doc.text("RIYAZ INTERNET PRIVATE LTD.", doc.internal.pageSize.width / 2, footerY, {
+  align: "center",
+});
+
+// Save the PDF
+
+
+doc.save(`${formData.userName}`);
+}
