@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef,useEffect } from 'react';
 import axios from 'axios';
 import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
@@ -45,6 +45,17 @@ const FileUploadForm = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const canvasRef = useRef(null);
 
+  // Add this inside the component
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'white'; // Set the fill color to white
+      ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the canvas
+    }
+  }, []);
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevState) => ({ ...prevState, [name]: value }));
@@ -69,6 +80,8 @@ const FileUploadForm = () => {
 
   const saveSignature = () => {
     const canvas = canvasRef.current;
+
+
     if (canvas) {
       return canvas.toDataURL('image/jpeg');
     }
@@ -84,8 +97,10 @@ const FileUploadForm = () => {
     }
 
     const data = new FormData();
+
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
     if (profilePic) data.append('profilePic', profilePic);
+
 
     try {
       const signatureImage = saveSignature();
@@ -136,17 +151,18 @@ const FileUploadForm = () => {
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-  
+
     const ctx = canvas.getContext('2d');
+
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-  
+
     ctx.beginPath();
     ctx.moveTo(x, y);
     canvas.isDrawing = true;
   };
-  
+
 
 
   const draw = (e) => {
@@ -154,6 +170,7 @@ const FileUploadForm = () => {
     if (!canvas?.isDrawing) return;
 
     const ctx = canvas.getContext('2d');
+
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
