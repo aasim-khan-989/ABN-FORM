@@ -256,7 +256,7 @@ const FileUploadForm = () => {
           onMouseMove={draw}
           onTouchMove={draw}
           onMouseUp={stopDrawing}
-          onTouchEnd={stopDrawing}
+          // onTouchEnd={stopDrawing}
           onMouseLeave={stopDrawing}
           className="border border-gray-400 rounded-md"
         />
