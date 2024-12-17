@@ -1,12 +1,9 @@
-import React, { useState, useRef,useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
 
 const FileUploadForm = () => {
-  const [document1, setDocument1] = useState(null);  
-const [document2, setDocument2] = useState(null);
-
   const [formData, setFormData] = useState({
     name: '',
     userName: '',
@@ -42,22 +39,24 @@ const [document2, setDocument2] = useState(null);
     date: '',
     place: '',
   });
-
   const [profilePic, setProfilePic] = useState(null);
+  const [document1, setDocument1] = useState(null);
+  const [document2, setDocument2] = useState(null);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+
   const canvasRef = useRef(null);
 
-  // Add this inside the component
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white'; // Set the fill color to white
-      ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the canvas
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }, []);
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,8 +64,10 @@ const [document2, setDocument2] = useState(null);
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setProfilePic(file);
+    const { name, files } = e.target;
+    if (name === 'profilePic') setProfilePic(files[0]);
+    if (name === 'document1') setDocument1(files[0]);
+    if (name === 'document2') setDocument2(files[0]);
   };
 
   const handleTermsAcceptanceChange = (isAccepted) => {
@@ -77,16 +78,13 @@ const [document2, setDocument2] = useState(null);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white'; // Set the fill color to white
-      ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the canvas
-      // ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   };
 
   const saveSignature = () => {
     const canvas = canvasRef.current;
-
-
     if (canvas) {
       return canvas.toDataURL('image/jpeg');
     }
@@ -95,47 +93,52 @@ const [document2, setDocument2] = useState(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     if (!isTermsAccepted) {
       alert('Please accept the terms and conditions before submitting.');
       return;
     }
-  
+
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     const data = new FormData();
-    
-    // Append all form data
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
-    
-    // Explicitly append files
     if (profilePic) data.append('profilePic', profilePic);
     if (document1) data.append('document1', document1);
     if (document2) data.append('document2', document2);
-  
+
     try {
       const signatureImage = saveSignature();
       const byteString = atob(signatureImage.split(',')[1]);
       const uint8Array = new Uint8Array(byteString.length);
-      
       for (let i = 0; i < byteString.length; i++) {
         uint8Array[i] = byteString.charCodeAt(i);
       }
-      
       const blob = new Blob([uint8Array], { type: 'image/jpeg' });
       data.append('signature', blob, 'signature.jpg');
-  
+
       const apiUrl = import.meta.env.VITE_API_URL;
       await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       alert('Form submitted successfully!');
       setIsSubmitted(true);
     } catch (error) {
       console.error('Error during form submission:', error);
       alert('Failed to submit the form. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleGenerateReceipt = async () => {
+    if (isGeneratingReceipt) return;
+
+    setIsGeneratingReceipt(true);
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await axios.get(`${apiUrl}/get-form-data`);
@@ -149,21 +152,24 @@ const [document2, setDocument2] = useState(null);
         });
 
         alert('Receipt generated and form data deleted successfully.');
+        setIsSubmitted(false); // Reset state to require re-submission
       } else {
         alert('No form data found to generate the receipt.');
       }
     } catch (error) {
       console.error('Error during receipt generation:', error);
       alert('Failed to generate receipt. Please try again.');
+    } finally {
+      setIsGeneratingReceipt(false);
     }
   };
+
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
@@ -173,14 +179,11 @@ const [document2, setDocument2] = useState(null);
     canvas.isDrawing = true;
   };
 
-
-
   const draw = (e) => {
     const canvas = canvasRef.current;
     if (!canvas?.isDrawing) return;
 
     const ctx = canvas.getContext('2d');
-
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
@@ -190,7 +193,6 @@ const [document2, setDocument2] = useState(null);
     ctx.lineWidth = 2;
     ctx.stroke();
   };
-
 
   const stopDrawing = () => {
     const canvas = canvasRef.current;
@@ -206,6 +208,7 @@ const [document2, setDocument2] = useState(null);
     >
       <h2 className="text-3xl font-bold text-blue-600 text-center">RIYAZ INTERNET PVT. LTD</h2>
 
+      {/* Form Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
           { name: 'name', label: 'Full Name' },
@@ -236,7 +239,7 @@ const [document2, setDocument2] = useState(null);
           { name: 'cheque_no', label: 'Cheque/DD No.' },
           { name: 'dated', label: 'Cheque/DD issued on (Dated)', type: 'date' },
           { name: 'pan', label: 'PAN (For Post Paid)' },
-          { name: 'date', label: 'Date',type:'date' },
+          { name: 'date', label: 'Date', type: 'date' },
           { name: 'place', label: 'Place' },
         ].map(({ name, label, type = 'text', options }) => (
           <div key={name} className="space-y-1">
@@ -284,29 +287,29 @@ const [document2, setDocument2] = useState(null);
           className="mt-1 block w-full text-sm text-gray-600"
         />
       </div>
-      <div className="space-y-4">  
-  <label className="block text-sm font-medium text-gray-700">Document 1 (Please add only  images of Good Quality)</label>  
-  <input 
-  name='document1'   
-    type="file"  
-    accept=".jpeg,.jpg,.png,.pdf"  
-    onChange={(e) => setDocument1(e.target.files[0])}  
-    className="mt-1 block w-full text-sm text-gray-600"  
-  />  
-</div>  
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Document 1 (Please add only  images of Good Quality)</label>
+        <input
+          name='document1'
+          type="file"
+          accept=".jpeg,.jpg,.png,.pdf"
+          onChange={(e) => setDocument1(e.target.files[0])}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
 
-<div className="space-y-4">  
-  <label className="block text-sm font-medium text-gray-700">Document 2 (Please add only  images of Good Quality)</label>  
-  <input  
-  name='document2'
-    type="file"  
-    accept=".jpeg,.jpg,.png,.pdf"  
-    onChange={(e) => setDocument2(e.target.files[0])}  
-    className="mt-1 block w-full text-sm text-gray-600"  
-  />  
-</div>
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Document 2 (Please add only  images of Good Quality)</label>
+        <input
+          name='document2'
+          type="file"
+          accept=".jpeg,.jpg,.png,.pdf"
+          onChange={(e) => setDocument2(e.target.files[0])}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
 
-
+      {/* Signature Canvas */}
       <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
         <canvas
@@ -322,7 +325,6 @@ const [document2, setDocument2] = useState(null);
           onMouseLeave={stopDrawing}
           className="border border-gray-400 rounded-md"
         />
-
         <button
           type="button"
           onClick={clearCanvas}
@@ -332,23 +334,27 @@ const [document2, setDocument2] = useState(null);
         </button>
       </div>
 
+      {/* Terms and Conditions */}
       <TermsAndConditions onAcceptanceChange={handleTermsAcceptanceChange} />
 
+      {/* Buttons */}
       <div className="flex justify-center space-x-4">
         <button
           type="submit"
-          className={`px-6 py-3 text-white rounded-md font-medium ${isTermsAccepted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
-          disabled={!isTermsAccepted}
+          className={`px-6 py-3 text-white rounded-md font-medium ${isSubmitting || !isTermsAccepted ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          disabled={isSubmitting || !isTermsAccepted}
         >
-          Submit
+          {isSubmitting ? 'Submitting...' : 'Submit'}
         </button>
+
         <button
           type="button"
           onClick={handleGenerateReceipt}
-          className={`px-6 py-3 text-white rounded-md font-medium ${isSubmitted ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
-          disabled={!isSubmitted}
+          className={`px-6 py-3 text-white rounded-md font-medium ${!isSubmitted || isGeneratingReceipt ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+          disabled={!isSubmitted || isGeneratingReceipt}
         >
-          Generate Receipt
+          {isGeneratingReceipt ? 'Generating...' : 'Generate Receipt'}
         </button>
       </div>
     </form>
@@ -356,6 +362,3 @@ const [document2, setDocument2] = useState(null);
 };
 
 export default FileUploadForm;
-
-
-  

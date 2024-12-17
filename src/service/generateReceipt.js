@@ -15,17 +15,15 @@ const resizeImage = (base64Image, maxWidth, maxHeight) => {
 
       // Maintain aspect ratio
       const ratio = Math.min(maxWidth / width, maxHeight / height);
+
       width *= ratio;
       height *= ratio;
 
-      // Use high-resolution canvas scaling
-      canvas.width = width * 2; // Double the width
-      canvas.height = height * 2; // Double the height
-      ctx.scale(2, 2);
+      canvas.width = width;
+      canvas.height = height;
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Convert to base64 with high quality
       resolve(canvas.toDataURL("image/jpeg", 0.95));
     };
 
@@ -33,42 +31,61 @@ const resizeImage = (base64Image, maxWidth, maxHeight) => {
   });
 };
 
+// Function to dynamically adjust page size and add the image
+const addLargeImageToPDF = async (doc, base64Image) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Image;
+    img.onload = () => {
+      const imageWidth = img.width;
+      const imageHeight = img.height;
 
+      // Convert dimensions to mm (1 pixel = 0.264583 mm)
+      const widthInMM = imageWidth * 0.264583;
+      const heightInMM = imageHeight * 0.264583;
 
-const mergePDFs = async (base64Data, outputDoc) => {
-  const existingPdfBytes = atob(base64Data.split(",")[1]);
-  const pdfDoc = await PDFDocument.load(existingPdfBytes);
-  const copiedPages = await outputDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
-  copiedPages.forEach((page) => outputDoc.addPage(page));
+      // If the image is larger than A4, adjust the page size dynamically
+      const pageWidth = Math.max(210, widthInMM); // A4 width is 210mm
+      const pageHeight = Math.max(297, heightInMM); // A4 height is 297mm
+
+      doc.addPage([pageWidth, pageHeight]); // Add a new page with custom size
+      doc.addImage(base64Image, "JPEG", 0, 0, pageWidth, pageHeight); // Add the image to fit the page
+      resolve();
+    };
+
+    img.onerror = (err) => reject(err);
+  });
 };
 
-
-
-const addPDFToDocument = async (outputDoc, base64Data) => {
+// Function to handle adding PDFs to the document
+const addPDFToDocument = async (doc, base64Data) => {
   try {
-    await mergePDFs(base64Data, outputDoc);
+    const existingPdfBytes = atob(base64Data.split(",")[1]);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const copiedPages = await pdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+    copiedPages.forEach((page) => {
+      const { width, height } = page.getSize();
+
+      // Convert dimensions to mm (1 point = 0.352778 mm)
+      const pageWidthInMM = width * 0.352778;
+      const pageHeightInMM = height * 0.352778;
+
+      // Add the page to the jsPDF document with the corresponding size
+      doc.addPage([pageWidthInMM, pageHeightInMM]);
+      doc.addImage(page, "JPEG", 0, 0, pageWidthInMM, pageHeightInMM); // Add content to fit
+    });
   } catch (error) {
     console.error("Error merging PDF:", error);
   }
 };
 
-
-
+// Function to handle adding a document (image or PDF)
 const addDocumentToPDF = async (doc, base64Data) => {
   try {
     if (base64Data.startsWith("data:image/")) {
-      // Resize the image before adding to the PDF
-      const resizedImage = await resizeImage(base64Data, 200, 280); // Adjust dimensions as necessary
-      doc.addPage();
-      doc.addImage(resizedImage, "JPEG", 5, 5, 200, 280); // Adjust position and dimensions as needed
+      await addLargeImageToPDF(doc, base64Data); // Dynamically adjust for large images
     } else if (base64Data.startsWith("data:application/pdf")) {
-      const pdfBytes = await PDFDocument.create();
-      await mergePDFs(base64Data, pdfBytes);
-      const pdfPages = pdfBytes.getPages();
-      pdfPages.forEach((page) => {
-        doc.addPage();
-        doc.addImage(page, "JPEG", 5, 5, 200, 280);
-      });
+      await addPDFToDocument(doc, base64Data); // Add PDF pages with original dimensions
     } else {
       console.error("Unsupported file format:", base64Data);
     }
