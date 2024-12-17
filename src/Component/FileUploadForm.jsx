@@ -4,6 +4,9 @@ import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
 
 const FileUploadForm = () => {
+  const [document1, setDocument1] = useState(null);  
+const [document2, setDocument2] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     userName: '',
@@ -92,33 +95,38 @@ const FileUploadForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     if (!isTermsAccepted) {
       alert('Please accept the terms and conditions before submitting.');
       return;
     }
-
+  
     const data = new FormData();
-
+    
+    // Append all form data
     Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+    
+    // Explicitly append files
     if (profilePic) data.append('profilePic', profilePic);
-
-
+    if (document1) data.append('document1', document1);
+    if (document2) data.append('document2', document2);
+  
     try {
       const signatureImage = saveSignature();
       const byteString = atob(signatureImage.split(',')[1]);
       const uint8Array = new Uint8Array(byteString.length);
+      
       for (let i = 0; i < byteString.length; i++) {
         uint8Array[i] = byteString.charCodeAt(i);
       }
+      
       const blob = new Blob([uint8Array], { type: 'image/jpeg' });
       data.append('signature', blob, 'signature.jpg');
-
+  
       const apiUrl = import.meta.env.VITE_API_URL;
       await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
+      
       alert('Form submitted successfully!');
       setIsSubmitted(true);
     } catch (error) {
@@ -200,7 +208,6 @@ const FileUploadForm = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
-          { name: 'userName', label: 'Username' },
           { name: 'name', label: 'Full Name' },
           { name: 'company', label: 'Company Name' },
           { name: 'billing_address', label: 'Billing Address', type: 'textarea' },
@@ -212,9 +219,25 @@ const FileUploadForm = () => {
           { name: 'telephone', label: 'Telephone (O.)' },
           { name: 'email', label: 'E-mail ID' },
           { name: 'aadhar', label: 'Aadhar No' },
-          { name: 'internet_usage', label: 'Internet Usage', type: 'dropdown', options: ['Business', 'Residential', 'Both'] },
+          { name: 'internet_usage', label: 'This internet connection is mainly going to be used for', type: 'dropdown', options: ['Business/Work', 'Residential', 'Both'] },
           { name: 'gender', label: 'Gender', type: 'dropdown', options: ['Male', 'Female'] },
           { name: 'dob', label: 'Date of Birth', type: 'date' },
+          { name: 'plan_name', label: 'User Plan Name' },
+          { name: 'plan_id', label: 'User Plan ID' },
+          { name: 'installation_charges', label: 'Installation Charges (Rs.)', type: 'number' },
+          { name: 'payment_mechanism', label: 'Payment Mechanism', type: 'dropdown', options: ['Prepaid', 'Postpaid'] },
+          { name: 'renewal_charges', label: 'Renewal Charges (Rs.)', type: 'number' },
+          { name: 'ips', label: 'No. of Static IPS' },
+          { name: 'other_charges', label: 'Other Charges (if any)', type: 'number' },
+          { name: 'payment_mode', label: 'Payment Mode', type: 'dropdown', options: ['Cash', 'Cheque', 'UPI'] },
+          { name: 'amount', label: 'Amount (Rs.)', type: 'number' },
+          { name: 'bank', label: 'Cheque / DD issued on Bank' },
+          { name: 'branch', label: 'Branch' },
+          { name: 'cheque_no', label: 'Cheque/DD No.' },
+          { name: 'dated', label: 'Cheque/DD issued on (Dated)', type: 'date' },
+          { name: 'pan', label: 'PAN (For Post Paid)' },
+          { name: 'date', label: 'Date',type:'date' },
+          { name: 'place', label: 'Place' },
         ].map(({ name, label, type = 'text', options }) => (
           <div key={name} className="space-y-1">
             <label htmlFor={name} className="block text-sm font-medium text-gray-700">
@@ -261,6 +284,28 @@ const FileUploadForm = () => {
           className="mt-1 block w-full text-sm text-gray-600"
         />
       </div>
+      <div className="space-y-4">  
+  <label className="block text-sm font-medium text-gray-700">Document 1 (Please add only  images of Good Quality)</label>  
+  <input 
+  name='document1'   
+    type="file"  
+    accept=".jpeg,.jpg,.png,.pdf"  
+    onChange={(e) => setDocument1(e.target.files[0])}  
+    className="mt-1 block w-full text-sm text-gray-600"  
+  />  
+</div>  
+
+<div className="space-y-4">  
+  <label className="block text-sm font-medium text-gray-700">Document 2 (Please add only  images of Good Quality)</label>  
+  <input  
+  name='document2'
+    type="file"  
+    accept=".jpeg,.jpg,.png,.pdf"  
+    onChange={(e) => setDocument2(e.target.files[0])}  
+    className="mt-1 block w-full text-sm text-gray-600"  
+  />  
+</div>
+
 
       <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
@@ -311,3 +356,6 @@ const FileUploadForm = () => {
 };
 
 export default FileUploadForm;
+
+
+  
