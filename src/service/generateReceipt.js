@@ -102,6 +102,7 @@ export const generateReceipt = async (formData) => {
     unit: "mm",
     format: "a4",
   });
+  console.log(formData)
 
 
 
@@ -431,5 +432,5 @@ and agree to abide by the same. I/we confirm that the details provided in this a
     await addDocumentToPDF(doc, formData.document2);
   }
 
-  doc.save(`${formData.userName}`);
+  doc.save(`${formData.plan_id}`);
 }

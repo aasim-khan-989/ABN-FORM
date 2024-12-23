@@ -109,6 +109,7 @@ const FileUploadForm = () => {
     if (document1) data.append('document1', document1);
     if (document2) data.append('document2', document2);
 
+
     try {
       const signatureImage = saveSignature();
       const byteString = atob(signatureImage.split(',')[1]);
@@ -118,12 +119,16 @@ const FileUploadForm = () => {
       }
       const blob = new Blob([uint8Array], { type: 'image/jpeg' });
       data.append('signature', blob, 'signature.jpg');
+      console.log("FormData contents:");
+      for (let [key, value] of data.entries()) {
+        console.log(`${key}:`, value);
+      }
 
       const apiUrl = import.meta.env.VITE_API_URL;
       await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
+   
       alert('Form submitted successfully!');
       setIsSubmitted(true);
     } catch (error) {
@@ -282,8 +287,10 @@ const FileUploadForm = () => {
       <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
         <input
+        name='profilePic'
           type="file"
-          onChange={handleFileChange}
+          accept=".jpeg,.jpg,.png,"
+          onChange={(e) => setProfilePic(e.target.files[0])}
           className="mt-1 block w-full text-sm text-gray-600"
         />
       </div>
@@ -292,7 +299,7 @@ const FileUploadForm = () => {
         <input
           name='document1'
           type="file"
-          accept=".jpeg,.jpg,.png,.pdf"
+          accept=".jpeg,.jpg,.png,"
           onChange={(e) => setDocument1(e.target.files[0])}
           className="mt-1 block w-full text-sm text-gray-600"
         />
@@ -303,7 +310,7 @@ const FileUploadForm = () => {
         <input
           name='document2'
           type="file"
-          accept=".jpeg,.jpg,.png,.pdf"
+          accept=".jpeg,.jpg,.png"
           onChange={(e) => setDocument2(e.target.files[0])}
           className="mt-1 block w-full text-sm text-gray-600"
         />
