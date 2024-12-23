@@ -52,6 +52,7 @@ const addDynamicImageToPDF = async (doc, base64Image, targetPage) => {
   });
 };
 
+
 const resizeImage = (base64Image, maxWidth, maxHeight) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -80,31 +81,6 @@ const resizeImage = (base64Image, maxWidth, maxHeight) => {
   });
 };
 
-// Function to dynamically adjust page size and add the image
-const addLargeImageToPDF = async (doc, base64Image) => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.src = base64Image;
-    img.onload = () => {
-      const imageWidth = img.width;
-      const imageHeight = img.height;
-
-      // Convert dimensions to mm (1 pixel = 0.264583 mm)
-      const widthInMM = imageWidth * 0.264583;
-      const heightInMM = imageHeight * 0.264583;
-
-      // If the image is larger than A4, adjust the page size dynamically
-      const pageWidth = Math.max(210, widthInMM); // A4 width is 210mm
-      const pageHeight = Math.max(297, heightInMM); // A4 height is 297mm
-
-      doc.addPage([pageWidth, pageHeight]); // Add a new page with custom size
-      doc.addImage(base64Image, "JPEG", 0, 0, pageWidth, pageHeight); // Add the image to fit the page
-      resolve();
-    };
-
-    img.onerror = (err) => reject(err);
-  });
-};
 
 // Function to handle adding PDFs to the document
 const addPDFToDocument = async (doc, base64Data) => {
@@ -134,11 +110,11 @@ const addDocumentToPDF = async (doc, base64Data) => {
     if (base64Data.startsWith("data:image/")) {
       // Dynamically adjust image dimensions
       await addDynamicImageToPDF(doc, base64Data);
-      doc.addPage(); // Add a new page after the image
+      // doc.addPage(); // Add a new page after the image
     } else if (base64Data.startsWith("data:application/pdf")) {
       // Add PDF pages and ensure they start from a new page
       await addPDFToDocument(doc, base64Data);
-      doc.addPage(); // Add a new page after the PDF
+      // doc.addPage(); // Add a new page after the PDF
     } else {
       console.error("Unsupported file format:", base64Data);
     }
@@ -146,9 +122,6 @@ const addDocumentToPDF = async (doc, base64Data) => {
     console.error("Error adding document to PDF:", error);
   }
 };
-
-
-
 
 export const generateReceipt = async (formData) => {
   const doc = new jsPDF({
@@ -215,8 +188,12 @@ export const generateReceipt = async (formData) => {
     null,
     "center"
   );
+  // CAF No with ERROR in red
   doc.setFont("helvetica", "bold");
-  doc.text(`CAF No: 7385 ${formData.caf_no || " "}`, 200, 32, null, null, "right");
+  doc.text("CAF No:", 186, 32, null, null, "right"); // CAF No in black
+  doc.setTextColor(255, 0, 0); // Set text color to red
+  doc.text("ERROR", 200, 32, null, null, "right"); // ERROR in red
+  doc.setTextColor(0, 0, 0); // Reset text color to black
 
   // Divider
   drawLine(35);
@@ -227,38 +204,62 @@ export const generateReceipt = async (formData) => {
   const userDetails = [
     { label: "Name", value: formData.name },
     { label: "Company Name", value: formData.company },
-    { label: "Billing Address", value: formData.billing_address },
-    { label: "Installation Address", value: formData.installation_address },
     { label: "City", value: formData.city },
     { label: "PIN", value: formData.pin },
     { label: "State", value: formData.state },
-
-    {
-      label: "Mobile",
-      value: formData.mobile,
-      inlineLabel: "Tel. (O)",
-      inlineValue: formData.telephone,
-    },
-
     {
       label: "Gender",
       value: formData.gender,
       inlineLabel: "Date of Birth",
       inlineValue: formData.dob,
     },
+    {
+      label: "Mobile",
+      value: formData.mobile,
+      inlineLabel: "Telephone",
+      inlineValue: formData.telephone,
+    },
   ];
-
+  
+  // Loop through the details
   userDetails.forEach(({ label, value, inlineLabel, inlineValue }) => {
-    y = addKeyValuePair(label, value, y, 10, 58); // Adjust the x-coordinate for values (e.g., from 80 to 70)
+    y = addKeyValuePair(label, value, y, 10, 58); // Adjust the position
     if (inlineLabel) {
-      y -= 6; // Align inline key-value pairs
-      addKeyValuePair(inlineLabel, inlineValue, y, 120, 150); // Adjust for inline values
+      y -= 6; // Align inline key-value pairs on the same line
+      addKeyValuePair(inlineLabel, inlineValue, y, 120, 160); // Adjust for inline key-value
       y += 6;
     }
   });
+  
+  // Billing Address and Installation Address (Handle Overflow)
+  const addressDetails = [
+    { label: "Billing Address", value: formData.billing_address },
+    { label: "Installation Address", value: formData.installation_address },
+  ];
+  
+  addressDetails.forEach(({ label, value }) => {
+    doc.setFontSize(10); // Smaller font for addresses
+    doc.setFont("helvetica", "bold");
+    doc.text(`${label}:`, 10, y);
+  
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(value || "N/A", 150); // Wrap text
+    const lineHeight = 4; // Line spacing for smaller text
+  
+    // Render each line and adjust `y` accordingly
+    lines.forEach((line, index) => {
+      doc.text(line, 56, y + index * lineHeight);
+    });
+  
+    // Update `y` position based on the number of lines rendered
+    y += lines.length > 1 ? lines.length * lineHeight + 2 : lineHeight + 2;
+  });
+  
+  doc.setFontSize(10); // Reset font size after addresses
+
 
   if (formData.profilePic) {
-    doc.addImage(formData.profilePic, "JPEG", 160, 45, 30, 30);
+    doc.addImage(formData.profilePic, "JPEG", 170, 45, 30, 30);
   }
 
   drawLine(y);
@@ -330,6 +331,12 @@ export const generateReceipt = async (formData) => {
   // Draw a line after the "Payment Details" section
   drawLine(y);
   y += 6;
+   const totalContentHeight = y; // Current total content height
+  
+  if (totalContentHeight >= 280) {
+    doc.addPage(); // Add another page if content is too long
+  }
+
 
   // Add the note
   doc.setFontSize(9);
