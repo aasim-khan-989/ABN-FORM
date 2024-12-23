@@ -238,17 +238,17 @@ export const generateReceipt = async (formData) => {
   ];
   
   addressDetails.forEach(({ label, value }) => {
-    doc.setFontSize(10); // Smaller font for addresses
+    doc.setFontSize(11); // Smaller font for addresses
     doc.setFont("helvetica", "bold");
     doc.text(`${label}:`, 10, y);
   
     doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(value || "N/A", 150); // Wrap text
+    const lines = doc.splitTextToSize(value || "N/A", 160); // Wrap text
     const lineHeight = 4; // Line spacing for smaller text
   
     // Render each line and adjust `y` accordingly
     lines.forEach((line, index) => {
-      doc.text(line, 56, y + index * lineHeight);
+      doc.text(line, 57.5, y + index * lineHeight);
     });
   
     // Update `y` position based on the number of lines rendered
@@ -259,7 +259,7 @@ export const generateReceipt = async (formData) => {
 
 
   if (formData.profilePic) {
-    doc.addImage(formData.profilePic, "JPEG", 170, 45, 30, 30);
+    doc.addImage(formData.profilePic, "JPEG", 170, 40, 30, 30);
   }
 
   drawLine(y);

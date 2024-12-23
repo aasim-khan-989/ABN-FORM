@@ -49,6 +49,8 @@ const FileUploadForm = () => {
 
   const canvasRef = useRef(null);
 
+  
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
