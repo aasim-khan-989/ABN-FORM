@@ -3,6 +3,55 @@ import { jsPDF } from "jspdf";
 import { PDFDocument } from "pdf-lib";
 
 // Function to handle adding documents to the PDF
+
+const addDynamicImageToPDF = async (doc, base64Image, targetPage) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Image;
+
+    img.onload = () => {
+      const imgWidth = img.width;
+      const imgHeight = img.height;
+
+      const widthInMM = imgWidth * 0.264583; // Convert width to millimeters
+      const heightInMM = imgHeight * 0.264583; // Convert height to millimeters
+
+      const pageWidth = Math.max(210, widthInMM); // A4 width (210 mm)
+      const pageHeight = Math.max(297, heightInMM); // A4 height (297 mm)
+
+      if (widthInMM <= 210 && heightInMM <= 297) {
+        // Fits within A4, center image
+        doc.addPage(); // Start with a new page for each document
+        doc.setPage(targetPage); // Ensure we set the right target page
+        doc.addImage(
+          base64Image,
+          "JPEG",
+          (210 - widthInMM) / 2,  // Center horizontally
+          (297 - heightInMM) / 2, // Center vertically
+          widthInMM,              // Set width of the image
+          heightInMM              // Set height of the image
+        );
+      } else {
+        // Image exceeds A4 size, so dynamically adjust and add new page
+        doc.addPage([pageWidth, pageHeight]); // New custom page size
+        doc.setPage(targetPage); // Ensure we set the right target page
+        doc.addImage(
+          base64Image,
+          "JPEG",
+          0, // Position image at the top-left corner
+          0, // Start from the top of the page
+          widthInMM, 
+          heightInMM
+        );
+      }
+
+      resolve(); // Resolve the promise after adding the image
+    };
+
+    img.onerror = (err) => reject(err); // Reject if there is an error with image
+  });
+};
+
 const resizeImage = (base64Image, maxWidth, maxHeight) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -83,9 +132,13 @@ const addPDFToDocument = async (doc, base64Data) => {
 const addDocumentToPDF = async (doc, base64Data) => {
   try {
     if (base64Data.startsWith("data:image/")) {
-      await addLargeImageToPDF(doc, base64Data); // Dynamically adjust for large images
+      // Dynamically adjust image dimensions
+      await addDynamicImageToPDF(doc, base64Data);
+      doc.addPage(); // Add a new page after the image
     } else if (base64Data.startsWith("data:application/pdf")) {
-      await addPDFToDocument(doc, base64Data); // Add PDF pages with original dimensions
+      // Add PDF pages and ensure they start from a new page
+      await addPDFToDocument(doc, base64Data);
+      doc.addPage(); // Add a new page after the PDF
     } else {
       console.error("Unsupported file format:", base64Data);
     }
@@ -93,6 +146,7 @@ const addDocumentToPDF = async (doc, base64Data) => {
     console.error("Error adding document to PDF:", error);
   }
 };
+
 
 
 
