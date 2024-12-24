@@ -2,9 +2,9 @@
 import { jsPDF } from "jspdf";
 import { PDFDocument } from "pdf-lib";
 
-// Function to handle adding documents to the PDF
 
-const addDynamicImageToPDF = async (doc, base64Image, targetPage) => {
+// Function to handle adding documents to the PDF
+const addDynamicImageToPDF = async (doc, base64Image) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = base64Image;
@@ -13,44 +13,46 @@ const addDynamicImageToPDF = async (doc, base64Image, targetPage) => {
       const imgWidth = img.width;
       const imgHeight = img.height;
 
-      const widthInMM = imgWidth * 0.264583; // Convert width to millimeters
-      const heightInMM = imgHeight * 0.264583; // Convert height to millimeters
+      const imgWidthInMM = imgWidth * 0.264583; // Convert pixel width to mm
+      const imgHeightInMM = imgHeight * 0.264583; // Convert pixel height to mm
 
-      const pageWidth = Math.max(210, widthInMM); // A4 width (210 mm)
-      const pageHeight = Math.max(297, heightInMM); // A4 height (297 mm)
+      const A4Width = 210; // A4 width in mm (Portrait)
+      const A4Height = 297; // A4 height in mm (Portrait)
 
-      if (widthInMM <= 210 && heightInMM <= 297) {
-        // Fits within A4, center image
-        doc.addPage(); // Start with a new page for each document
-        doc.setPage(targetPage); // Ensure we set the right target page
-        doc.addImage(
-          base64Image,
-          "JPEG",
-          (210 - widthInMM) / 2,  // Center horizontally
-          (297 - heightInMM) / 2, // Center vertically
-          widthInMM,              // Set width of the image
-          heightInMM              // Set height of the image
-        );
-      } else {
-        // Image exceeds A4 size, so dynamically adjust and add new page
-        doc.addPage([pageWidth, pageHeight]); // New custom page size
-        doc.setPage(targetPage); // Ensure we set the right target page
-        doc.addImage(
-          base64Image,
-          "JPEG",
-          0, // Position image at the top-left corner
-          0, // Start from the top of the page
-          widthInMM, 
-          heightInMM
-        );
-      }
+      // Calculate the scaling factor to fit the image into A4 dimensions without cropping
+      const widthScale = A4Width / imgWidthInMM;
+      const heightScale = A4Height / imgHeightInMM;
+      const scale = Math.min(widthScale, heightScale); // Ensure the image fits within A4 dimensions
 
-      resolve(); // Resolve the promise after adding the image
+      // Adjust the page size dynamically to fit the scaled image dimensions
+      const scaledWidth = imgWidthInMM * scale;
+      const scaledHeight = imgHeightInMM * scale;
+
+      const pageWidth = scaledWidth > A4Width ? scaledWidth : A4Width;
+      const pageHeight = scaledHeight > A4Height ? scaledHeight : A4Height;
+
+      doc.addPage([pageWidth, pageHeight]);
+
+      // Center the image on the new page size
+      const offsetX = (pageWidth - scaledWidth) / 2;
+      const offsetY = (pageHeight - scaledHeight) / 2;
+
+      doc.addImage(
+        base64Image,
+        "JPEG",
+        offsetX > 0 ? offsetX : 0, // Prevent negative offsets
+        offsetY > 0 ? offsetY : 0,
+        scaledWidth,
+        scaledHeight
+      );
+
+      resolve();
     };
 
-    img.onerror = (err) => reject(err); // Reject if there is an error with image
+    img.onerror = (err) => reject(err); // Reject the promise if image loading fails
   });
 };
+
 
 
 const resizeImage = (base64Image, maxWidth, maxHeight) => {
