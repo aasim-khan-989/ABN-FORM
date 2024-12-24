@@ -250,7 +250,7 @@ export const generateReceipt = async (formData) => {
     doc.text(`${label}:`, 10, y);
   
     doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(value || "N/A", 170); // Wrap text
+    const lines = doc.splitTextToSize(value || "N/A", 160); // Wrap text
     const lineHeight = 4; // Line spacing for smaller text
   
     // Render each line and adjust `y` accordingly
