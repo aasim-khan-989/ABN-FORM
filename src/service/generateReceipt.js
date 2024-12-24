@@ -192,11 +192,11 @@ export const generateReceipt = async (formData) => {
   );
   // CAF No with ERROR in red
   doc.setFont("helvetica", "bold");
-  doc.text("CAF No:", 187, 32, null, null, "right"); // CAF No in black
+  doc.text("CAF No:", 182, 32, null, null, "right"); // CAF No in black
   
   // Set text color to red for ERROR
   doc.setTextColor(255, 0, 0);
-  doc.text("NET::ERR", 205, 32, null, null, "right"); // Mimic a real error style
+  doc.text("NET::ERR", 200, 32, null, null, "right"); // Mimic a real error style
   
   // Reset text color to black
   doc.setTextColor(0, 0, 0);
@@ -250,7 +250,7 @@ export const generateReceipt = async (formData) => {
     doc.text(`${label}:`, 10, y);
   
     doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(value || "N/A", 160); // Wrap text
+    const lines = doc.splitTextToSize(value || "N/A", 170); // Wrap text
     const lineHeight = 4; // Line spacing for smaller text
   
     // Render each line and adjust `y` accordingly

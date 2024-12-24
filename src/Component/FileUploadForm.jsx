@@ -49,6 +49,22 @@ const FileUploadForm = () => {
 
   const canvasRef = useRef(null);
 
+  useEffect(() => {
+    const initializeServerlessBackend = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        // Sending a dummy GET request to initialize the backend
+        await axios.get(`${apiUrl}/initialize`);
+        console.log('Serverless backend initialized.');
+      } catch (error) {
+        console.error('Error initializing the serverless backend:', error);
+      }
+    };
+  
+    initializeServerlessBackend();
+  }, []);
+  
+
   
 
   useEffect(() => {
