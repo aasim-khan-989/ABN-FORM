@@ -3,6 +3,13 @@ import axios from 'axios';
 import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
 
+const formatToDateMonthYear = (dateString) => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-'); // Assuming input format is YYYY-MM-DD
+  return `${day}/${month}/${year}`;
+};
+
+
 const FileUploadForm = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -78,8 +85,10 @@ const FileUploadForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevState) => ({ ...prevState, [name]: value }));
+    const formattedValue = ['dob', 'dated', 'date'].includes(name) ? formatToDateMonthYear(value) : value;
+    setFormData((prevState) => ({ ...prevState, [name]: formattedValue }));
   };
+  
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
@@ -159,21 +168,28 @@ const FileUploadForm = () => {
 
   const handleGenerateReceipt = async () => {
     if (isGeneratingReceipt) return;
-
+  
     setIsGeneratingReceipt(true);
-
+  
     try {
       const apiUrl = import.meta.env.VITE_API_URL;
       const response = await axios.get(`${apiUrl}/get-form-data`);
       if (response.data?.length > 0) {
         const latestFormData = response.data[response.data.length - 1];
-
+  
+        // Format the date fields
+        ['dob', 'dated', 'date'].forEach((field) => {
+          if (latestFormData[field]) {
+            latestFormData[field] = formatToDateMonthYear(latestFormData[field]);
+          }
+        });
+  
         generateReceipt(latestFormData);
-
+  
         await axios.delete(`${apiUrl}/delete-form-data`, {
           data: { id: latestFormData.id },
         });
-
+  
         alert('Receipt generated and form data deleted successfully.');
         setIsSubmitted(false); // Reset state to require re-submission
       } else {
@@ -186,43 +202,51 @@ const FileUploadForm = () => {
       setIsGeneratingReceipt(false);
     }
   };
+  
 
 
   const startDrawing = (e) => {
+    e.preventDefault(); // Prevent default behavior
     const canvas = canvasRef.current;
     if (!canvas) return;
-
+  
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
+  
     ctx.beginPath();
     ctx.moveTo(x, y);
     canvas.isDrawing = true;
   };
-
+  
   const draw = (e) => {
+    e.preventDefault(); // Prevent scrolling during touch
     const canvas = canvasRef.current;
     if (!canvas?.isDrawing) return;
-
+  
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
     const x = e.touches ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
     const y = e.touches ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
+  
     ctx.lineTo(x, y);
     ctx.strokeStyle = 'blue';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2; // Adjust line width as needed
+    ctx.lineJoin = 'round'; // Smooth stroke edges
+    ctx.lineCap = 'round'; // Smooth stroke ends
     ctx.stroke();
   };
-
-  const stopDrawing = () => {
+  
+  const stopDrawing = (e) => {
+    e.preventDefault(); // Prevent default behavior
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.isDrawing = false;
     }
   };
+  
+
 
   return (
     <form
@@ -361,28 +385,29 @@ const FileUploadForm = () => {
 
       {/* Signature Canvas */}
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
-        <canvas
-          ref={canvasRef}
-          width="400"
-          height="150"
-          onMouseDown={startDrawing}
-          onTouchStart={startDrawing}
-          onMouseMove={draw}
-          onTouchMove={draw}
-          onMouseUp={stopDrawing}
-          onTouchEnd={stopDrawing}
-          onMouseLeave={stopDrawing}
-          className="border border-gray-400 rounded-md"
-        />
-        <button
-          type="button"
-          onClick={clearCanvas}
-          className="mt-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
-        >
-          Clear Signature
-        </button>
-      </div>
+  <label className="block text-sm font-medium text-gray-700">Digital Signature</label>
+  <canvas
+    ref={canvasRef}
+    width={window.innerWidth * 0.9} // Set canvas width to 90% of screen width
+    height={200} // Adjust height for better usability
+    onMouseDown={startDrawing}
+    onTouchStart={startDrawing}
+    onMouseMove={draw}
+    onTouchMove={draw}
+    onMouseUp={stopDrawing}
+    onTouchEnd={stopDrawing}
+    onMouseLeave={stopDrawing}
+    className="border border-gray-400 rounded-md bg-white"
+    style={{ touchAction: 'none', display: 'block', margin: '0 auto' }} // Prevent default gestures
+  />
+  <button
+    type="button"
+    onClick={clearCanvas}
+    className="mt-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600"
+  >
+    Clear Signature
+  </button>
+</div>
 
       {/* Terms and Conditions */}
       <TermsAndConditions onAcceptanceChange={handleTermsAcceptanceChange} />
