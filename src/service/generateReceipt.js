@@ -232,9 +232,9 @@ export const generateReceipt = async (formData) => {
   userDetails.forEach(({ label, value, inlineLabel, inlineValue }) => {
     y = addKeyValuePair(label, value, y, 10, 58); // Adjust the position
     if (inlineLabel) {
-      y -= 6; // Align inline key-value pairs on the same line
-      addKeyValuePair(inlineLabel, inlineValue, y, 120, 160); // Adjust for inline key-value
-      y += 6;
+      y -= 5; // Align inline key-value pairs on the same line
+      addKeyValuePair(inlineLabel, inlineValue, y, 120, 150); // Adjust for inline key-value
+      y += 5;
     }
   });
   

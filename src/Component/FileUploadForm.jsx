@@ -3,11 +3,7 @@ import axios from 'axios';
 import TermsAndConditions from './TermsAndConditions';
 import { generateReceipt } from '../service/generateReceipt';
 
-const formatToDateMonthYear = (dateString) => {
-  if (!dateString) return '';
-  const [year, month, day] = dateString.split('-'); // Assuming input format is YYYY-MM-DD
-  return `${day}/${month}/${year}`;
-};
+
 
 
 const FileUploadForm = () => {
@@ -53,6 +49,12 @@ const FileUploadForm = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingReceipt, setIsGeneratingReceipt] = useState(false);
+
+  const formatToDateMonthYear = (dateString) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-'); // Assuming input format is YYYY-MM-DD
+    return `${day}/${month}/${year}`;
+  };
 
   const canvasRef = useRef(null);
 
@@ -150,7 +152,7 @@ const FileUploadForm = () => {
       for (let [key, value] of data.entries()) {
         console.log(`${key}:`, value);
       }
-
+      
       const apiUrl = import.meta.env.VITE_API_URL;
       await axios.post(`${apiUrl}/submit-form`, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -178,11 +180,11 @@ const FileUploadForm = () => {
         const latestFormData = response.data[response.data.length - 1];
   
         // Format the date fields
-        ['dob', 'dated', 'date'].forEach((field) => {
-          if (latestFormData[field]) {
-            latestFormData[field] = formatToDateMonthYear(latestFormData[field]);
-          }
-        });
+        // ['dob', 'dated', 'date'].forEach((field) => {
+        //   if (latestFormData[field]) {
+        //     latestFormData[field] = formatToDateMonthYear(latestFormData[field]);
+        //   }
+        // });
   
         generateReceipt(latestFormData);
   
@@ -265,8 +267,8 @@ const FileUploadForm = () => {
           { name: 'city', label: 'City' },
           { name: 'pin', label: 'PIN' },
           { name: 'state', label: 'State' },
-          { name: 'mobile', label: 'Mobile' },
-          { name: 'telephone', label: 'Telephone (O.)' },
+          { name: 'mobile', label: 'Mobile',type:"number" },
+          { name: 'telephone', label: 'Telephone (O.)',type:'number' },
           { name: 'email', label: 'E-mail ID' },
           { name: 'aadhar', label: 'Aadhar No' },
           { name: 'internet_usage', label: 'This internet connection is mainly going to be used for', type: 'dropdown', options: ['Business/Work', 'Residential', 'Both'] },
