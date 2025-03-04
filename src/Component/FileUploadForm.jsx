@@ -374,6 +374,27 @@ const FileUploadForm = () => {
     </div>
   ))}
 </div>
+<div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Document 1 (Please add only  images of Good Quality)</label>
+        <input
+          name='document1'
+          type="file"
+          accept=".jpeg,.jpg,.png,"
+          onChange={(e) => setDocument1(e.target.files[0])}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
+
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Document 2 (Please add only  images of Good Quality)</label>
+        <input
+          name='document2'
+          type="file"
+          accept=".jpeg,.jpg,.png"
+          onChange={(e) => setDocument2(e.target.files[0])}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
 
       <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Signature Option</label>
@@ -442,6 +463,7 @@ const FileUploadForm = () => {
           />
         </div>
       )}
+
 
       {/* ... (existing terms and conditions and buttons) */}
       
