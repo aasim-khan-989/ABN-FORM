@@ -374,6 +374,43 @@ const FileUploadForm = () => {
     </div>
   ))}
 </div>
+
+<div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">
+          DECLARATION IN CASE PAYMENT IS MADE BY ENTITY OTHER THAN THE APPLICANT:
+        </label>
+        <p className="text-gray-600">
+          This is to inform that we are making the payment to RIYAZ INTERNET PVT. LTD. on behalf of:
+        </p>
+        <input
+          type="text"
+          name="entity_payment_details"
+          placeholder="N/A"
+          onChange={handleChange}
+          className="mt-1 p-2 border border-gray-300 rounded-md w-full"
+        />
+        <label className="block text-sm font-medium text-gray-700">
+          Name of the individual/organization making payment in favor of RIYAZ INTERNET PVT. LTD:
+        </label>
+        <input
+          type="text"
+          name="entity_payment_name"
+          placeholder="N/A"
+          onChange={handleChange}
+          className="mt-1 p-2 border border-gray-300 rounded-md w-full"
+        />
+      </div>
+      
+<div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
+        <input
+          name='profilePic'
+          type="file"
+          accept=".jpeg,.jpg,.png,"
+          onChange={(e) => setProfilePic(e.target.files[0])}
+          className="mt-1 block w-full text-sm text-gray-600"
+        />
+      </div>
 <div className="space-y-4">
         <label className="block text-sm font-medium text-gray-700">Document 1 (Please add only  images of Good Quality)</label>
         <input
